@@ -1,7 +1,7 @@
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
+import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
+import { getAuth, type Auth } from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
+import { getStorage, type FirebaseStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -12,9 +12,24 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-const auth = getAuth(app);
-const firestore = getFirestore(app);
-const storage = getStorage(app);
+let app: FirebaseApp | null = null;
+let auth: Auth | null = null;
+let firestore: Firestore | null = null;
+let storage: FirebaseStorage | null = null;
+let firebaseError: string | null = null;
 
-export { app, auth, firestore, storage };
+if (!firebaseConfig.apiKey) {
+  firebaseError = 'Firebase API key is missing. Please make sure NEXT_PUBLIC_FIREBASE_API_KEY is set in your .env file and that you have restarted the development server.';
+} else {
+    try {
+        app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+        auth = getAuth(app);
+        firestore = getFirestore(app);
+        storage = getStorage(app);
+    } catch (e: any) {
+        firebaseError = `There was an error initializing Firebase: ${e.message}`;
+    }
+}
+
+
+export { app, auth, firestore, storage, firebaseError };
