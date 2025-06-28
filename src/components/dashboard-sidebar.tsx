@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { FileText, LayoutDashboard, Package, Send, User } from "lucide-react"
+import { FileText, LayoutDashboard, Package, User, Layers } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip"
@@ -11,6 +11,7 @@ import { Logo } from "./logo"
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/dashboard/invoices", icon: FileText, label: "Invoices" },
+  { href: "/dashboard/invoice-pool", icon: Layers, label: "Invoice Pool" },
   { href: "/dashboard/products", icon: Package, label: "Products" },
   { href: "/dashboard/profile", icon: User, label: "Profile" },
 ]
