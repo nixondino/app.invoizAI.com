@@ -86,3 +86,35 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Custom font for elegant template */
+.font-elegant {
+  font-family: 'Georgia', 'Times New Roman', serif;
+}
+
+/* Smooth transitions for template buttons */
+.template-btn {
+  transition: all 0.3s ease;
+}
+
+.template-btn:hover {
+  transform: translateY(-2px);
+}
+
+/* Print styles */
+@media print {
+  body {
+    background: white !important;
+  }
+  
+  .container > *:not(.invoice-preview) {
+    display: none !important;
+  }
+  
+  .invoice-preview {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}
