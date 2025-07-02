@@ -1,15 +1,43 @@
 import type { InvoiceData } from '@/types/invoice'
 
-interface TemplateProps {
-  data: InvoiceData
-}
+const mockedItems = [
+    {
+        no: 1,
+        name: 'Samsung Galaxy F23',
+        hsn: '8517',
+        description: 'Color Aqua Green, 128 GB',
+        quantity: 1,
+        rate: 14405.93,
+        taxableValue: 14405.93,
+        taxAmount: 2593.07,
+        taxPercentage: 18,
+        amount: 16999.00
+    },
+    {
+        no: 2,
+        name: 'Samsung 45 Watt Travel Adapter',
+        hsn: '8504',
+        description: 'EP-TA845XBNGIN, Color - Black',
+        quantity: 1,
+        rate: 2117.80,
+        taxableValue: 2117.80,
+        taxAmount: 381.20,
+        taxPercentage: 18,
+        amount: 2499.00
+    }
+];
 
-export default function ElegantTemplate({ data }: TemplateProps) {
+const totalTaxableAmount = mockedItems.reduce((acc, item) => acc + item.taxableValue, 0);
+const totalTaxAmount = mockedItems.reduce((acc, item) => acc + item.taxAmount, 0);
+const totalAmount = mockedItems.reduce((acc, item) => acc + item.amount, 0);
+
+
+export default function ElegantTemplate({ data }: { data: InvoiceData }) {
   return (
-    <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-8">
+    <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-8 font-elegant">
       <div className="bg-white rounded-lg shadow-lg p-8 border-t-4 border-purple-500">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-elegant text-purple-600 mb-2">{data.companyName}</h1>
+          <h1 className="text-4xl text-purple-600 mb-2">{data.companyName}</h1>
           <div className="w-24 h-1 bg-gradient-to-r from-purple-400 to-pink-400 mx-auto mb-4"></div>
           <p className="text-purple-500 uppercase tracking-widest text-sm">Invoice</p>
         </div>
@@ -30,54 +58,55 @@ export default function ElegantTemplate({ data }: TemplateProps) {
         </div>
 
         <div className="mb-8">
-          <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-4 rounded-t-lg">
-            <div className="grid grid-cols-4 gap-4">
-              <span className="font-semibold">Service</span>
-              <span className="font-semibold text-center">Hours</span>
-              <span className="font-semibold text-center">Rate</span>
-              <span className="font-semibold text-right">Total</span>
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+                  <th className="p-3 text-sm font-semibold rounded-tl-lg">No</th>
+                  <th className="p-3 text-sm font-semibold">Item</th>
+                  <th className="p-3 text-sm font-semibold text-right">Rate</th>
+                  <th className="p-3 text-sm font-semibold text-right">Quantity</th>
+                  <th className="p-3 text-sm font-semibold text-right">Taxable Value</th>
+                  <th className="p-3 text-sm font-semibold text-right">Tax Amount</th>
+                  <th className="p-3 text-sm font-semibold text-right rounded-tr-lg">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {mockedItems.map((item) => (
+                    <tr key={item.no} className="border-b border-purple-100">
+                        <td className="p-3">{item.no}</td>
+                        <td className="p-3">
+                            <p className="font-semibold text-purple-800">{item.name}</p>
+                            <p className="text-xs text-purple-600">HSN: {item.hsn}</p>
+                        </td>
+                        <td className="p-3 text-right">₹{item.rate.toFixed(2)}</td>
+                        <td className="p-3 text-right">{item.quantity}</td>
+                        <td className="p-3 text-right">₹{item.taxableValue.toFixed(2)}</td>
+                        <td className="p-3 text-right">₹{item.taxAmount.toFixed(2)}</td>
+                        <td className="p-3 text-right font-bold text-purple-700">₹{item.amount.toFixed(2)}</td>
+                    </tr>
+                ))}
+              </tbody>
+            </table>
+        </div>
+        
+        <div className="flex justify-end">
+            <div className="w-2/5">
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg">
+                    <div className="flex justify-between text-purple-700">
+                        <span>Taxable Amount</span>
+                        <span>₹{totalTaxableAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-purple-700">
+                        <span>IGST ({mockedItems[0].taxPercentage}%)</span>
+                        <span>₹{totalTaxAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="border-t border-purple-200 my-2"></div>
+                    <div className="flex justify-between font-bold text-xl text-purple-800">
+                        <span>Total</span>
+                        <span>₹{totalAmount.toFixed(2)}</span>
+                    </div>
+                </div>
             </div>
-          </div>
-          <div className="bg-white border-l-4 border-r-4 border-purple-200 p-4">
-            <div className="grid grid-cols-4 gap-4 py-3">
-              <span className="text-gray-700">Consulting Services</span>
-              <span className="text-center text-gray-600">1</span>
-              <span className="text-center text-gray-600">₹{data.price.toFixed(2)}</span>
-              <span className="text-right font-semibold text-purple-600">₹{data.price.toFixed(2)}</span>
-            </div>
-          </div>
-          <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 border-l-4 border-r-4 border-purple-200">
-            <div className="space-y-2 text-right">
-              <div className="flex justify-end gap-4">
-                <span className="text-purple-600">Subtotal:</span>
-                <span className="text-purple-800 w-24 text-right">₹{data.price.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-end gap-4">
-                <span className="text-purple-600">VAT ({data.vatPercentage}%):</span>
-                <span className="text-purple-800 w-24 text-right">₹{data.vatAmount.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-end gap-4">
-                <span className="text-purple-600">GSTIN ({data.gstinPercentage}%):</span>
-                <span className="text-purple-800 w-24 text-right">₹{data.gstinAmount.toFixed(2)}</span>
-              </div>
-            </div>
-          </div>
-          <div className="bg-gradient-to-r from-purple-100 to-pink-100 p-6 rounded-b-lg border-l-4 border-r-4 border-purple-200">
-            <div className="space-y-3">
-              <div className="flex justify-between text-purple-800">
-                <span className="text-lg font-semibold">Total Amount:</span>
-                <span className="text-2xl font-bold">₹{data.totalAmount.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-purple-700">
-                <span>Paid Amount:</span>
-                <span className="font-semibold">₹{data.paidAmount.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-purple-600 border-t border-purple-300 pt-2">
-                <span className="font-bold">Balance Amount:</span>
-                <span className="text-xl font-bold">₹{data.balanceAmount.toFixed(2)}</span>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>

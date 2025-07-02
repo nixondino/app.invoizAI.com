@@ -1,12 +1,37 @@
 import type { InvoiceData } from '@/types/invoice'
 
-interface TemplateProps {
-  data: InvoiceData
-}
+const mockedItems = [
+    {
+        no: 1,
+        name: 'Samsung Galaxy F23',
+        hsn: '8517',
+        quantity: 1,
+        rate: 14405.93,
+        taxableValue: 14405.93,
+        taxAmount: 2593.07,
+        taxPercentage: 18,
+        amount: 16999.00
+    },
+    {
+        no: 2,
+        name: 'Samsung 45 Watt Travel Adapter',
+        hsn: '8504',
+        quantity: 1,
+        rate: 2117.80,
+        taxableValue: 2117.80,
+        taxAmount: 381.20,
+        taxPercentage: 18,
+        amount: 2499.00
+    }
+];
 
-export default function MinimalTemplate({ data }: TemplateProps) {
+const totalTaxableAmount = mockedItems.reduce((acc, item) => acc + item.taxableValue, 0);
+const totalTaxAmount = mockedItems.reduce((acc, item) => acc + item.taxAmount, 0);
+const totalAmount = mockedItems.reduce((acc, item) => acc + item.amount, 0);
+
+export default function MinimalTemplate({ data }: { data: InvoiceData }) {
   return (
-    <div className="bg-gray-50 p-8">
+    <div className="bg-gray-50 p-8 font-sans">
       <div className="bg-white rounded p-8 max-w-4xl mx-auto border border-gray-200">
         <div className="flex justify-between items-start mb-12">
           <div>
@@ -39,60 +64,56 @@ export default function MinimalTemplate({ data }: TemplateProps) {
           </div>
         </div>
 
-        <div className="border-t border-gray-200 pt-8 mb-8">
-          <div className="grid grid-cols-4 gap-4 py-4 border-b border-gray-100">
-            <span className="text-sm text-gray-500 uppercase tracking-wider">Description</span>
-            <span className="text-sm text-gray-500 uppercase tracking-wider text-center">Qty</span>
-            <span className="text-sm text-gray-500 uppercase tracking-wider text-center">Rate</span>
-            <span className="text-sm text-gray-500 uppercase tracking-wider text-right">Amount</span>
-          </div>
-          <div className="grid grid-cols-4 gap-4 py-6">
-            <span className="text-gray-800">Professional Services</span>
-            <span className="text-gray-600 text-center">1</span>
-            <span className="text-gray-600 text-center">₹{data.price.toFixed(2)}</span>
-            <span className="text-gray-800 font-medium text-right">₹{data.price.toFixed(2)}</span>
-          </div>
-        </div>
+        <table className="w-full text-left table-auto">
+            <thead>
+                <tr className="border-b-2 border-t-2 border-gray-200 bg-gray-50">
+                <th className="p-2 text-left font-normal text-xs uppercase text-gray-500">No</th>
+                <th className="p-2 text-left font-normal text-xs uppercase text-gray-500">Item</th>
+                <th className="p-2 text-right font-normal text-xs uppercase text-gray-500">Rate</th>
+                <th className="p-2 text-right font-normal text-xs uppercase text-gray-500">Quantity</th>
+                <th className="p-2 text-right font-normal text-xs uppercase text-gray-500">Taxable Value</th>
+                <th className="p-2 text-right font-normal text-xs uppercase text-gray-500">Tax Amount</th>
+                <th className="p-2 text-right font-normal text-xs uppercase text-gray-500">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {mockedItems.map((item) => (
+                    <tr key={item.no} className="border-b border-gray-100">
+                        <td className="p-3 text-sm">{item.no}</td>
+                        <td className="p-3 text-sm">
+                            <p className="font-medium text-gray-800">{item.name}</p>
+                            <p className="text-xs text-gray-600">HSN: {item.hsn}</p>
+                        </td>
+                        <td className="p-3 text-sm text-right">₹{item.rate.toFixed(2)}</td>
+                        <td className="p-3 text-sm text-right">{item.quantity}</td>
+                        <td className="p-3 text-sm text-right">₹{item.taxableValue.toFixed(2)}</td>
+                        <td className="p-3 text-sm text-right">₹{item.taxAmount.toFixed(2)}</td>
+                        <td className="p-3 text-sm text-right font-semibold text-gray-900">₹{item.amount.toFixed(2)}</td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
 
-        <div className="bg-gray-50 p-4 rounded mb-6">
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Subtotal:</span>
-              <span>₹{data.price.toFixed(2)}</span>
+        <div className="flex justify-end mt-8">
+            <div className="w-2/5 text-sm">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                    <div className="flex justify-between text-gray-600">
+                        <span>Taxable Amount</span>
+                        <span>₹{totalTaxableAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-600">
+                        <span>IGST ({mockedItems[0].taxPercentage}%)</span>
+                        <span>₹{totalTaxAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="border-t border-gray-200 my-2"></div>
+                    <div className="flex justify-between font-bold text-gray-800 text-base">
+                        <span>Total</span>
+                        <span>₹{totalAmount.toFixed(2)}</span>
+                    </div>
+                </div>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">VAT ({data.vatPercentage}%):</span>
-              <span>₹{data.vatAmount.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">GSTIN ({data.gstinPercentage}%):</span>
-              <span>₹{data.gstinAmount.toFixed(2)}</span>
-            </div>
-            <div className="border-t border-gray-200 pt-2">
-              <div className="flex justify-between font-bold">
-                <span>Total Amount:</span>
-                <span>₹{data.totalAmount.toFixed(2)}</span>
-              </div>
-            </div>
-          </div>
         </div>
-
-        <div className="bg-gray-800 text-white p-4 rounded">
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span>Total Amount:</span>
-              <span className="font-bold">₹{data.totalAmount.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Paid Amount:</span>
-              <span className="font-bold">₹{data.paidAmount.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-gray-300">
-              <span>Balance Amount:</span>
-              <span className="font-bold text-xl">₹{data.balanceAmount.toFixed(2)}</span>
-            </div>
-          </div>
-        </div>
+        
       </div>
     </div>
   )
