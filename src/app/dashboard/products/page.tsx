@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from "react"
+import React, { useState, useEffect, useCallback } from "react"
 import {
   Table,
   TableBody,
@@ -18,39 +18,47 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, PlusCircle } from "lucide-react"
+import { MoreHorizontal, PlusCircle, Loader2 } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
+import type { Product } from "@prisma/client"
+import { getProducts, addProduct, updateProduct, deleteProduct } from "@/app/actions/products"
 
-type Product = {
-  id: string;
-  name: string;
-  sku: string;
-  price: number;
-  inventory: number;
-  tax: number;
-};
 
-const initialProducts: Product[] = [
-  { id: "PROD001", name: "Premium Web Hosting", sku: "WH-PREM-YR", price: 8000.00, inventory: 1000, tax: 18.0 },
-  { id: "PROD002", name: "Standard Domain Registration", sku: "DOM-STD-YR", price: 1200.00, inventory: 5000, tax: 0.0 },
-  { id: "PROD003", name: "SSL Certificate", sku: "SSL-CERT-YR", price: 4000.00, inventory: 2500, tax: 12.0 },
-  { id: "PROD004", name: "Cloud Storage (1TB)", sku: "CS-1TB-MO", price: 800.00, inventory: 10000, tax: 18.0 },
-  { id: "PROD005", name: "Website Maintenance Plan", sku: "WEB-MAINT-MO", price: 6000.00, inventory: 500, tax: 18.0 },
-];
-
-const emptyProduct: Product = { id: "", name: "", sku: "", price: 0, inventory: 0, tax: 0 };
+const emptyProduct: Omit<Product, 'id'> = { name: "", sku: "", price: 0, inventory: 0, tax: 0 };
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [productToEdit, setProductToEdit] = useState<Product | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const { toast } = useToast();
+
+  const fetchProducts = useCallback(async () => {
+    try {
+        const fetchedProducts = await getProducts();
+        setProducts(fetchedProducts);
+    } catch (error) {
+        toast({
+            variant: "destructive",
+            title: "Failed to fetch products",
+            description: "There was an error loading the products.",
+        });
+    } finally {
+        setLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    setLoading(true);
+    fetchProducts();
+  }, [fetchProducts]);
 
   const handleOpenForm = (product: Product | null) => {
     setProductToEdit(product);
@@ -62,27 +70,46 @@ export default function ProductsPage() {
     setIsAlertOpen(true);
   };
   
-  const handleSaveProduct = (formData: Product) => {
-    if (productToEdit) {
-      // Edit existing product
-      setProducts(products.map(p => p.id === productToEdit.id ? { ...p, ...formData } : p));
-      toast({ title: "Product Updated", description: `Product ${formData.name} has been updated.` });
-    } else {
-      // Add new product
-      const newProduct = { ...formData, id: `PROD${String(Date.now()).slice(-4)}` };
-      setProducts([...products, newProduct]);
-      toast({ title: "Product Added", description: `Product ${formData.name} has been added.` });
+  const handleSaveProduct = async (formData: Omit<Product, 'id'> | Product) => {
+    setIsSaving(true);
+    try {
+        if ('id' in formData && formData.id) {
+            await updateProduct(formData as Product);
+            toast({ title: "Product Updated", description: `Product ${formData.name} has been updated.` });
+        } else {
+            await addProduct(formData as Omit<Product, 'id'>);
+            toast({ title: "Product Added", description: `Product ${formData.name} has been added.` });
+        }
+        await fetchProducts();
+        setIsFormOpen(false);
+        setProductToEdit(null);
+    } catch (error: any) {
+        toast({
+            variant: "destructive",
+            title: "Failed to save product",
+            description: error.message || "An unexpected error occurred.",
+        });
+    } finally {
+        setIsSaving(false);
     }
-    setIsFormOpen(false);
-    setProductToEdit(null);
   };
 
-  const handleDeleteProduct = () => {
-    if (productToDelete) {
-      setProducts(products.filter(p => p.id !== productToDelete.id));
-      toast({ variant: "destructive", title: "Product Deleted", description: `Product ${productToDelete.name} has been deleted.` });
-      setIsAlertOpen(false);
-      setProductToDelete(null);
+  const handleDeleteProduct = async () => {
+    if (productToDelete && productToDelete.id) {
+        try {
+            await deleteProduct(productToDelete.id);
+            toast({ variant: "destructive", title: "Product Deleted", description: `Product ${productToDelete.name} has been deleted.` });
+            await fetchProducts();
+        } catch (error: any) {
+             toast({
+                variant: "destructive",
+                title: "Failed to delete product",
+                description: error.message || "An unexpected error occurred.",
+            });
+        } finally {
+            setIsAlertOpen(false);
+            setProductToDelete(null);
+        }
     }
   };
 
@@ -102,47 +129,53 @@ export default function ProductsPage() {
           </Button>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Product Name</TableHead>
-                <TableHead>SKU</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Inventory</TableHead>
-                <TableHead>Tax (%)</TableHead>
-                <TableHead>
-                  <span className="sr-only">Actions</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {products.map((product) => (
-                <TableRow key={product.id}>
-                  <TableCell className="font-medium">{product.name}</TableCell>
-                  <TableCell>{product.sku}</TableCell>
-                  <TableCell>₹{product.price.toFixed(2)}</TableCell>
-                  <TableCell>{product.inventory}</TableCell>
-                  <TableCell>{product.tax.toFixed(1)}%</TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button aria-haspopup="true" size="icon" variant="ghost">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Toggle menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => handleOpenForm(product)}>Edit</DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive" onClick={() => handleOpenAlert(product)}>Delete</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+            {loading ? (
+                <div className="flex justify-center items-center h-48">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+            ) : (
+                <Table>
+                <TableHeader>
+                    <TableRow>
+                    <TableHead>Product Name</TableHead>
+                    <TableHead>SKU</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead>Inventory</TableHead>
+                    <TableHead>Tax (%)</TableHead>
+                    <TableHead>
+                        <span className="sr-only">Actions</span>
+                    </TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {products.map((product) => (
+                    <TableRow key={product.id}>
+                        <TableCell className="font-medium">{product.name}</TableCell>
+                        <TableCell>{product.sku}</TableCell>
+                        <TableCell>₹{product.price.toFixed(2)}</TableCell>
+                        <TableCell>{product.inventory}</TableCell>
+                        <TableCell>{product.tax.toFixed(1)}%</TableCell>
+                        <TableCell>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                            <Button aria-haspopup="true" size="icon" variant="ghost">
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">Toggle menu</span>
+                            </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => handleOpenForm(product)}>Edit</DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-destructive" onClick={() => handleOpenAlert(product)}>Delete</DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                        </TableCell>
+                    </TableRow>
+                    ))}
+                </TableBody>
+                </Table>
+            )}
         </CardContent>
       </Card>
       
@@ -151,6 +184,7 @@ export default function ProductsPage() {
         onOpenChange={setIsFormOpen}
         product={productToEdit}
         onSave={handleSaveProduct}
+        isSaving={isSaving}
       />
 
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
@@ -176,14 +210,22 @@ interface ProductFormDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   product: Product | null;
-  onSave: (product: Product) => void;
+  onSave: (product: Omit<Product, 'id'> | Product) => Promise<void>;
+  isSaving: boolean;
 }
 
-function ProductFormDialog({ isOpen, onOpenChange, product, onSave }: ProductFormDialogProps) {
-  const [formData, setFormData] = useState<Product>(product || emptyProduct);
+function ProductFormDialog({ isOpen, onOpenChange, product, onSave, isSaving }: ProductFormDialogProps) {
+  const [formData, setFormData] = useState<Omit<Product, 'id'>>(emptyProduct);
 
   React.useEffect(() => {
-    setFormData(product || emptyProduct);
+    if (isOpen) {
+        if (product) {
+            const { id, ...dataToEdit } = product;
+            setFormData(dataToEdit);
+        } else {
+            setFormData(emptyProduct);
+        }
+    }
   }, [product, isOpen]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -191,9 +233,10 @@ function ProductFormDialog({ isOpen, onOpenChange, product, onSave }: ProductFor
     setFormData(prev => ({ ...prev, [id]: type === 'number' ? parseFloat(value) || 0 : value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
+    const dataToSave = product ? { ...formData, id: product.id } : formData;
+    await onSave(dataToSave);
   };
 
   return (
@@ -230,8 +273,11 @@ function ProductFormDialog({ isOpen, onOpenChange, product, onSave }: ProductFor
           </div>
         </form>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button type="submit" form="product-form">Save Product</Button>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>Cancel</Button>
+          <Button type="submit" form="product-form" disabled={isSaving}>
+            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save Product
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
