@@ -1,0 +1,93 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String    @id // From Firebase Auth
+  email     String    @unique
+  name      String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  profile   Profile?
+  products  Product[]
+  invoices  Invoice[]
+}
+
+model Profile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName     String?
+  gstNumber       String?
+  address         String?
+  contactNumber   String?
+  supportNumber   String?
+  logoUrl         String?
+  defaultTaxRate  Float?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  invoiceTemplateId String?
+  invoiceTemplate InvoiceTemplate? @relation(fields: [invoiceTemplateId], references: [id])
+}
+
+model InvoiceTemplate {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  profiles  Profile[]
+  invoices  Invoice[]
+}
+
+model Product {
+  id        String   @id @default(cuid())
+  name      String
+  sku       String   @unique
+  price     Float
+  inventory Int
+  tax       Float
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Invoice {
+  id              String   @id @default(cuid())
+  invoiceNumber   String   @unique
+  status          String // e.g., "Paid", "Pending", "Unpaid"
+  customerName    String
+  customerEmail   String
+  customerPhone   String
+  customerAddress String
+  invoiceDate     DateTime
+  dueDate         DateTime
+  subtotal        Float
+  totalGst        Float
+  totalAmount     Float
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  templateId      String
+  template        InvoiceTemplate @relation(fields: [templateId], references: [id])
+  items           InvoiceItem[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model InvoiceItem {
+  id        String  @id @default(cuid())
+  name      String
+  quantity  Int
+  price     Float
+  tax       Float
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
