@@ -1,7 +1,16 @@
 'use server';
 
 import { firestore } from '@/lib/firebase';
-import { doc, getDoc, runTransaction, collection } from 'firebase/firestore';
+import {
+    collection,
+    getDocs,
+    addDoc,
+    doc,
+    updateDoc,
+    deleteDoc,
+    query,
+    orderBy
+} from 'firebase/firestore';
 import { revalidatePath } from 'next/cache';
 
 export interface Product {
@@ -15,22 +24,16 @@ export interface Product {
 
 export type ProductData = Omit<Product, 'id'>;
 
-// As per your request, using a single document in the 'profile' collection to store products.
-const PROFILE_DOC_ID = 'Naa70mv1rJxOhhv6chCS';
-const profileDocRef = doc(firestore, 'profile', PROFILE_DOC_ID);
+const productsCollectionRef = collection(firestore, 'products');
 
 export async function getProducts(): Promise<Product[]> {
     if (!firestore) {
         throw new Error("Firestore is not initialized.");
     }
     try {
-        const docSnap = await getDoc(profileDocRef);
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            const productList = (data.products as Product[]) || [];
-            return productList.sort((a, b) => a.name.localeCompare(b.name));
-        }
-        return [];
+        const q = query(productsCollectionRef, orderBy("name"));
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
     } catch (error) {
         console.error("Failed to fetch products from Firestore:", error);
         return [];
@@ -41,58 +44,28 @@ export async function addProduct(data: ProductData): Promise<Product> {
     if (!firestore) {
         throw new Error("Firestore is not initialized.");
     }
-
-    // Generate a new unique ID for the product document.
-    const newId = doc(collection(firestore, '_')).id;
-    const newProduct: Product = { id: newId, ...data };
-
     try {
-        await runTransaction(firestore, async (transaction) => {
-            const profileDoc = await transaction.get(profileDocRef);
-            if (!profileDoc.exists()) {
-                transaction.set(profileDocRef, { products: [newProduct] });
-            } else {
-                const existingProducts = profileDoc.data().products || [];
-                transaction.update(profileDocRef, { products: [...existingProducts, newProduct] });
-            }
-        });
+        const docRef = await addDoc(productsCollectionRef, data);
+        revalidatePath('/dashboard/products');
+        return { id: docRef.id, ...data };
     } catch (e) {
-        console.error("Transaction failed: ", e);
+        console.error("Failed to add product:", e);
         throw new Error("Failed to add product.");
     }
-
-    revalidatePath('/dashboard/products');
-    return newProduct;
 }
-
 
 export async function updateProduct(data: Product): Promise<Product> {
     if (!firestore) {
         throw new Error("Firestore is not initialized.");
     }
-    
+    const { id, ...productData } = data;
+    const productDoc = doc(firestore, 'products', id);
     try {
-        await runTransaction(firestore, async (transaction) => {
-            const profileDoc = await transaction.get(profileDocRef);
-            if (!profileDoc.exists()) {
-                throw new Error("Profile document does not exist.");
-            }
-            
-            const products = (profileDoc.data().products || []) as Product[];
-            const productIndex = products.findIndex(p => p.id === data.id);
-
-            if (productIndex > -1) {
-                products[productIndex] = data;
-                transaction.update(profileDocRef, { products });
-            } else {
-                throw new Error("Product not found for updating.");
-            }
-        });
-    } catch(e) {
-        console.error("Transaction failed: ", e);
+        await updateDoc(productDoc, productData);
+    } catch (e) {
+        console.error("Failed to update product:", e);
         throw new Error("Failed to update product.");
     }
-    
     revalidatePath('/dashboard/products');
     return data;
 }
@@ -101,30 +74,13 @@ export async function deleteProduct(id: string): Promise<{ success: true, id: st
     if (!firestore) {
         throw new Error("Firestore is not initialized.");
     }
-
+    const productDoc = doc(firestore, 'products', id);
     try {
-        await runTransaction(firestore, async (transaction) => {
-            const profileDoc = await transaction.get(profileDocRef);
-            if (!profileDoc.exists()) {
-                 // Nothing to delete
-                return;
-            }
-            
-            const products = (profileDoc.data().products || []) as Product[];
-            const updatedProducts = products.filter(p => p.id !== id);
-            
-            if (products.length === updatedProducts.length) {
-                // Product not found, but we don't need to throw an error.
-                // The result is the same: the product is not in the list.
-            }
-
-            transaction.update(profileDocRef, { products: updatedProducts });
-        });
-    } catch(e) {
-        console.error("Transaction failed: ", e);
+        await deleteDoc(productDoc);
+    } catch (e) {
+        console.error("Failed to delete product:", e);
         throw new Error("Failed to delete product.");
     }
-    
     revalidatePath('/dashboard/products');
     return { success: true, id };
 }
