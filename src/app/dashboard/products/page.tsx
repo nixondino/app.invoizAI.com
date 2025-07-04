@@ -235,9 +235,9 @@ export default function ProductsPage() {
                   <TableRow key={product.id}>
                     <TableCell className="font-medium">{product.name}</TableCell>
                     <TableCell>{product.sku}</TableCell>
-                    <TableCell>₹{product.price.toFixed(2)}</TableCell>
-                    <TableCell>{product.inventory}</TableCell>
-                    <TableCell>{product.tax.toFixed(1)}%</TableCell>
+                    <TableCell>₹{(product.price || 0).toFixed(2)}</TableCell>
+                    <TableCell>{product.inventory || 0}</TableCell>
+                    <TableCell>{(product.tax || 0).toFixed(1)}%</TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
