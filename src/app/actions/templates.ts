@@ -1,7 +1,7 @@
 'use server';
 
 import { firestore } from '@/lib/firebase';
-import { collection, getDocs, writeBatch, doc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import type { TemplateType } from '@/types/invoice';
 
 export interface Template {
@@ -25,15 +25,9 @@ export async function seedTemplates() {
     }
     
     try {
-        const templatesCollection = collection(firestore, 'templates');
-        const batch = writeBatch(firestore);
+        const docRef = doc(firestore, 'templates-01', 'invoice-01');
+        await setDoc(docRef, { templates: templatesToSeed });
 
-        templatesToSeed.forEach((template) => {
-            const docRef = doc(templatesCollection, template.id);
-            batch.set(docRef, template);
-        });
-
-        await batch.commit();
         return { success: true, message: `${templatesToSeed.length} templates seeded successfully.` };
     } catch (error) {
         console.error("Failed to seed templates:", error);
@@ -51,12 +45,14 @@ export async function getTemplates(): Promise<Template[]> {
         throw new Error("Firestore is not initialized.");
     }
     try {
-        const templatesCollection = collection(firestore, 'templates');
-        const snapshot = await getDocs(templatesCollection);
-        if (snapshot.empty) {
-            return [];
+        const docRef = doc(firestore, 'templates-01', 'invoice-01');
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            return (data.templates as Template[]) || [];
         }
-        return snapshot.docs.map(doc => doc.data() as Template);
+        return [];
     } catch (error) {
         console.error("Failed to fetch templates from Firestore. This might be due to incorrect security rules.", error);
         return [];
