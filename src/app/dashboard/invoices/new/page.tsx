@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Bot, Plus, Trash2, FileText, Download, UserRound } from 'lucide-react';
+import { Bot, Plus, Trash2, FileText, Download, UserRound, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/providers/auth-provider';
@@ -14,15 +14,8 @@ import { InvoicePreview } from '@/components/invoice-preview';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
-// Mock data for products - in a real app, this would be fetched from a database
-const availableProducts = [
-  { id: "PROD001", name: "Premium Web Hosting", sku: "WH-PREM-YR", price: 8000.00, inventory: 1000, tax: 18.0 },
-  { id: "PROD002", name: "Standard Domain Registration", sku: "DOM-STD-YR", price: 1200.00, inventory: 5000, tax: 0.0 },
-  { id: "PROD003", name: "SSL Certificate", sku: "SSL-CERT-YR", price: 4000.00, inventory: 2500, tax: 12.0 },
-  { id: "PROD004", name: "Cloud Storage (1TB)", sku: "CS-1TB-MO", price: 800.00, inventory: 10000, tax: 18.0 },
-  { id: "PROD005", name: "Website Maintenance Plan", sku: "WEB-MAINT-MO", price: 6000.00, inventory: 500, tax: 18.0 },
-];
+import { getProducts, type Product as AvailableProduct } from '@/app/actions/products';
+import { useToast } from "@/hooks/use-toast";
 
 type Message = {
     id: number;
@@ -46,6 +39,7 @@ type Customer = {
 
 export default function NewInvoicePage() {
     const { user } = useAuth();
+    const { toast } = useToast();
     const [step, setStep] = useState(0);
     const [messages, setMessages] = useState<Message[]>([
         { id: 1, sender: 'bot', content: "Hello! I'm your InvoicePilot assistant. Let's start by entering the customer's details." },
@@ -53,6 +47,29 @@ export default function NewInvoicePage() {
     const [customer, setCustomer] = useState<Customer>({ name: '', email: '', phone: '', address: '' });
     const [products, setProducts] = useState<Product[]>([]);
     const [newProduct, setNewProduct] = useState({ name: '', quantity: '1' });
+
+    const [availableProducts, setAvailableProducts] = useState<AvailableProduct[]>([]);
+    const [productsLoading, setProductsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                setProductsLoading(true);
+                const productsFromDb = await getProducts();
+                setAvailableProducts(productsFromDb);
+            } catch (error) {
+                console.error("Failed to fetch products:", error);
+                toast({
+                    variant: "destructive",
+                    title: "Error",
+                    description: "Could not fetch products from the database.",
+                });
+            } finally {
+                setProductsLoading(false);
+            }
+        };
+        fetchProducts();
+    }, [toast]);
 
     const addMessage = (sender: 'bot' | 'user', content: React.ReactNode) => {
         setMessages(prev => [...prev, { id: prev.length + 1, sender, content }]);
@@ -164,6 +181,12 @@ export default function NewInvoicePage() {
                                </div>
                            </div>
                        ))}
+                        {productsLoading ? (
+                            <div className="flex items-center justify-center p-4">
+                                <Loader2 className="h-6 w-6 animate-spin" />
+                                <span className="ml-2">Loading products...</span>
+                            </div>
+                        ) : (
                         <div className="flex items-end gap-2">
                              <div className="flex-1">
                                 <Label>Product</Label>
@@ -180,10 +203,11 @@ export default function NewInvoicePage() {
                             </div>
                             <div className="w-24">
                                <Label>Quantity</Label>
-                               <Input type="number" placeholder="Qty" value={newProduct.quantity} onChange={e => setNewProduct({...newProduct, quantity: e.target.value})} />
+                               <Input type="number" placeholder="Qty" value={newProduct.quantity} onChange={e => setNewProduct({...newProduct, quantity: e.target.value})} min="1" />
                             </div>
                             <Button size="icon" onClick={handleAddProduct}><Plus className="h-4 w-4"/></Button>
                         </div>
+                        )}
                     </CardContent>
                     <CardFooter className="flex-col items-stretch gap-4">
                         <Separator />
