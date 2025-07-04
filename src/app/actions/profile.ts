@@ -25,9 +25,19 @@ export async function getProfile(): Promise<CompanyProfile | null> {
         const docSnap = await getDoc(profileDocRef);
         if (docSnap.exists()) {
             const data = docSnap.data();
-            // Exclude products from the profile data
-            const { products, ...profileData } = data;
-            return profileData as CompanyProfile;
+            // Manually construct a plain Javascript object to ensure it's serializable.
+            // This prevents errors when passing data from Server Components to Client Components,
+            // as complex Firestore types (like GeoPoint or Timestamp) are not supported.
+            const plainProfile: CompanyProfile = {
+                companyName: data.companyName || '',
+                gstNumber: data.gstNumber || '',
+                address: data.address || '',
+                contactNumber: data.contactNumber || '',
+                supportNumber: data.supportNumber || '',
+                logoUrl: data.logoUrl || '',
+                defaultTax: data.defaultTax || 0,
+            };
+            return plainProfile;
         }
         return null;
     } catch (error) {
