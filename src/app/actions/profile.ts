@@ -51,8 +51,17 @@ export async function updateProfile(data: CompanyProfile): Promise<{ success: bo
         throw new Error("Firestore is not initialized.");
     }
     
+    // Create a clean object to ensure no undefined values are sent to Firestore.
+    const profileDataToSave: { [key: string]: any } = {};
+    Object.keys(data).forEach(key => {
+        const aKey = key as keyof CompanyProfile;
+        if (data[aKey] !== undefined) {
+            profileDataToSave[key] = data[aKey];
+        }
+    });
+
     try {
-        await setDoc(profileDocRef, data, { merge: true });
+        await setDoc(profileDocRef, profileDataToSave, { merge: true });
         revalidatePath('/dashboard/profile');
         return { success: true, message: "Profile updated successfully." };
     } catch (e) {
