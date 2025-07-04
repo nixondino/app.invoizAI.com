@@ -51,13 +51,17 @@ export default function InvoiceTemplatesPage() {
 
   const handleSeed = async () => {
     try {
-      await seedTemplates();
-      const fetchedTemplates = await getTemplates();
-      setTemplates(fetchedTemplates);
-      toast({ title: "Success", description: "Templates seeded successfully." })
+      const result = await seedTemplates();
+      if (result.success) {
+        const fetchedTemplates = await getTemplates();
+        setTemplates(fetchedTemplates);
+        toast({ title: "Success", description: result.message });
+      } else {
+        toast({ variant: "destructive", title: "Error", description: result.message });
+      }
     } catch (error) {
       console.error("Failed to seed templates:", error)
-      toast({ variant: "destructive", title: "Error", description: "Could not seed templates." })
+      toast({ variant: "destructive", title: "Error", description: "An unexpected error occurred." })
     }
   }
 
