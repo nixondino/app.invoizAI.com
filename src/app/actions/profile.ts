@@ -1,10 +1,10 @@
 'use server';
 
-import { firestore } from '@/lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase';
 import { revalidatePath } from 'next/cache';
 
 export interface CompanyProfile {
+    id?: string;
     companyName?: string;
     gstNumber?: string;
     address?: string;
@@ -12,61 +12,105 @@ export interface CompanyProfile {
     supportNumber?: string;
     logoUrl?: string;
     defaultTax?: number;
+    created_at?: string;
+    updated_at?: string;
 }
 
-const PROFILE_DOC_ID = 'Naa70mv1rJxOhhv6chCS';
-const profileDocRef = doc(firestore, 'profile', PROFILE_DOC_ID);
+const PROFILE_TABLE = 'profiles';
 
 export async function getProfile(): Promise<CompanyProfile | null> {
-    if (!firestore) {
-        throw new Error("Firestore is not initialized.");
-    }
     try {
-        const docSnap = await getDoc(profileDocRef);
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            // Manually construct a plain Javascript object to ensure it's serializable.
-            // This prevents errors when passing data from Server Components to Client Components,
-            // as complex Firestore types (like GeoPoint or Timestamp) are not supported.
-            const plainProfile: CompanyProfile = {
-                companyName: data.companyName || '',
-                gstNumber: data.gstNumber || '',
-                address: data.address || '',
-                contactNumber: data.contactNumber || '',
-                supportNumber: data.supportNumber || '',
-                logoUrl: data.logoUrl || '',
-                defaultTax: data.defaultTax || 0,
-            };
-            return plainProfile;
+        const { data, error } = await supabase
+            .from(PROFILE_TABLE)
+            .select('*')
+            .limit(1)
+            .single();
+
+        if (error) {
+            if (error.code === 'PGRST116') {
+                // No rows returned, which is fine for a new profile
+                return null;
+            }
+            console.error("Failed to fetch profile from Supabase:", error);
+            return null;
         }
-        return null;
+
+        // Map snake_case database columns to camelCase for frontend
+        return {
+            id: data.id,
+            companyName: data.company_name,
+            gstNumber: data.gst_number,
+            address: data.address,
+            contactNumber: data.contact_number,
+            supportNumber: data.support_number,
+            logoUrl: data.logo_url,
+            defaultTax: data.default_tax,
+            created_at: data.created_at,
+            updated_at: data.updated_at
+        };
     } catch (error) {
-        console.error("Failed to fetch profile from Firestore:", error);
+        console.error("Failed to fetch profile from Supabase:", error);
         return null;
     }
 }
 
 export async function updateProfile(data: CompanyProfile): Promise<{ success: boolean; message: string }> {
-    if (!firestore) {
-        throw new Error("Firestore is not initialized.");
-    }
-    
-    // Create a clean object to ensure no undefined values are sent to Firestore.
-    const profileDataToSave: { [key: string]: any } = {};
-    Object.keys(data).forEach(key => {
-        const aKey = key as keyof CompanyProfile;
-        if (data[aKey] !== undefined) {
-            profileDataToSave[key] = data[aKey];
-        }
-    });
-
     try {
-        await setDoc(profileDocRef, profileDataToSave, { merge: true });
+        // First, check if a profile already exists
+        const { data: existingProfile } = await supabase
+            .from(PROFILE_TABLE)
+            .select('id')
+            .limit(1)
+            .single();
+
+        let result;
+        
+        if (existingProfile) {
+            // Update existing profile
+            const { error } = await supabase
+                .from(PROFILE_TABLE)
+                .update({
+                    company_name: data.companyName,
+                    gst_number: data.gstNumber,
+                    address: data.address,
+                    contact_number: data.contactNumber,
+                    support_number: data.supportNumber,
+                    logo_url: data.logoUrl,
+                    default_tax: data.defaultTax,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', existingProfile.id);
+
+            if (error) {
+                console.error("Failed to update profile:", error);
+                return { success: false, message: error.message || "Failed to update profile." };
+            }
+        } else {
+            // Create new profile
+            const { error } = await supabase
+                .from(PROFILE_TABLE)
+                .insert({
+                    company_name: data.companyName,
+                    gst_number: data.gstNumber,
+                    address: data.address,
+                    contact_number: data.contactNumber,
+                    support_number: data.supportNumber,
+                    logo_url: data.logoUrl,
+                    default_tax: data.defaultTax,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                });
+
+            if (error) {
+                console.error("Failed to create profile:", error);
+                return { success: false, message: error.message || "Failed to create profile." };
+            }
+        }
+
         revalidatePath('/dashboard/profile');
         return { success: true, message: "Profile updated successfully." };
-    } catch (e) {
-        console.error("Failed to update profile:", e);
-        const typedError = e as any;
-        return { success: false, message: typedError.message || "Failed to update profile." };
+    } catch (error) {
+        console.error("Failed to update profile:", error);
+        return { success: false, message: "An unexpected error occurred while saving the profile." };
     }
 }

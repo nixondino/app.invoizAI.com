@@ -11,8 +11,7 @@ import Image from "next/image";
 import { useCallback, useState, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { getProfile, updateProfile, type CompanyProfile } from "@/app/actions/profile";
-import { storage } from "@/lib/firebase";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { supabase } from "@/lib/supabase";
 
 const defaultProfile: CompanyProfile = {
     companyName: '',
@@ -72,20 +71,26 @@ export default function ProfilePage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!storage) {
-            toast({ variant: "destructive", title: "Error", description: "Firebase Storage is not configured." });
-            return;
-        }
         setIsSaving(true);
         
         let updatedProfileData = { ...profile };
 
         try {
             if (logoFile) {
-                const storageRef = ref(storage, `logos/${Date.now()}_${logoFile.name}`);
-                const snapshot = await uploadBytes(storageRef, logoFile);
-                const downloadURL = await getDownloadURL(snapshot.ref);
-                updatedProfileData.logoUrl = downloadURL;
+                const fileName = `${Date.now()}_${logoFile.name}`;
+                const { data, error } = await supabase.storage
+                    .from('logos')
+                    .upload(fileName, logoFile);
+
+                if (error) {
+                    throw new Error(`Failed to upload logo: ${error.message}`);
+                }
+
+                const { data: { publicUrl } } = supabase.storage
+                    .from('logos')
+                    .getPublicUrl(fileName);
+
+                updatedProfileData.logoUrl = publicUrl;
             }
 
             const result = await updateProfile(updatedProfileData);
