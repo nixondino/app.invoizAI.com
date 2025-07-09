@@ -1,7 +1,6 @@
 'use server';
 
-import { firestore } from '@/lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase';
 import type { TemplateType } from '@/types/invoice';
 
 export interface Template {
@@ -20,41 +19,38 @@ const templatesToSeed: Template[] = [
 ];
 
 export async function seedTemplates() {
-    if (!firestore) {
-        throw new Error("Firestore is not initialized.");
-    }
-    
     try {
-        const docRef = doc(firestore, 'templates-01', 'invoice-01');
-        await setDoc(docRef, { templates: templatesToSeed });
+        const { error } = await supabase
+            .from('templates')
+            .upsert(templatesToSeed, { onConflict: 'id' });
+
+        if (error) {
+            console.error("Failed to seed templates:", error);
+            return { success: false, message: "Could not seed templates due to a server error." };
+        }
 
         return { success: true, message: `${templatesToSeed.length} templates seeded successfully.` };
     } catch (error) {
         console.error("Failed to seed templates:", error);
-        const typedError = error as any;
-        let errorMessage = "Could not seed templates due to a server error.";
-        if (typedError.code === 'permission-denied') {
-            errorMessage = "Failed to seed templates due to database permissions. Please check your Firestore security rules.";
-        }
-        return { success: false, message: errorMessage };
+        return { success: false, message: "Could not seed templates due to a server error." };
     }
 }
 
 export async function getTemplates(): Promise<Template[]> {
-    if (!firestore) {
-        throw new Error("Firestore is not initialized.");
-    }
     try {
-        const docRef = doc(firestore, 'templates-01', 'invoice-01');
-        const docSnap = await getDoc(docRef);
+        const { data, error } = await supabase
+            .from('templates')
+            .select('*')
+            .order('name');
 
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            return (data.templates as Template[]) || [];
+        if (error) {
+            console.error("Failed to fetch templates from Supabase:", error);
+            return [];
         }
-        return [];
+
+        return data || [];
     } catch (error) {
-        console.error("Failed to fetch templates from Firestore. This might be due to incorrect security rules.", error);
+        console.error("Failed to fetch templates from Supabase:", error);
         return [];
     }
 }

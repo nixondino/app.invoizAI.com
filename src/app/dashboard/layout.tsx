@@ -3,7 +3,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 
-import { useAuth } from '@/providers/auth-provider';
+import { useUser } from '@clerk/nextjs';
 import { DashboardSidebar } from '@/components/dashboard-sidebar';
 import { DashboardHeader } from '@/components/dashboard-header';
 
@@ -12,16 +12,16 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { user, loading } = useAuth();
+  const { user, isLoaded } = useUser();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (isLoaded && !user) {
       router.replace('/login');
     }
-  }, [user, loading, router]);
+  }, [user, isLoaded, router]);
 
-  if (loading || !user) {
+  if (!isLoaded || !user) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />

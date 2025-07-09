@@ -3,7 +3,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { useAuth } from "@/providers/auth-provider"
+import { useUser, useClerk } from "@/clerk/nextjs"
 import { LogOut, User as UserIcon, Menu } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet"
@@ -11,17 +11,18 @@ import { DashboardSidebar } from "./dashboard-sidebar"
 import Link from "next/link"
 
 export function DashboardHeader() {
-  const { user, logout } = useAuth()
+  const { user } = useUser()
+  const { signOut } = useClerk()
   const router = useRouter()
 
   const handleLogout = async () => {
-    await logout()
+    await signOut()
     router.push('/login')
   }
 
-  const getInitials = (name?: string | null) => {
-    if (!name) return 'U'
-    return name.split(' ').map(n => n[0]).join('').toUpperCase()
+  const getInitials = (firstName?: string | null, lastName?: string | null) => {
+    if (!firstName && !lastName) return 'U'
+    return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase()
   }
 
   return (
@@ -42,13 +43,13 @@ export function DashboardHeader() {
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="icon" className="overflow-hidden rounded-full">
             <Avatar>
-              <AvatarImage src={user?.photoURL || ''} alt={user?.displayName || 'User'} />
-              <AvatarFallback>{getInitials(user?.displayName)}</AvatarFallback>
+              <AvatarImage src={user?.imageUrl || ''} alt={user?.fullName || 'User'} />
+              <AvatarFallback>{getInitials(user?.firstName, user?.lastName)}</AvatarFallback>
             </Avatar>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel>{user?.displayName || user?.email}</DropdownMenuLabel>
+          <DropdownMenuLabel>{user?.fullName || user?.primaryEmailAddress?.emailAddress}</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <Link href="/dashboard/profile" passHref>
             <DropdownMenuItem>

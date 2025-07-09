@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Bot, Plus, Trash2, FileText, Download, UserRound, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { useAuth } from '@/providers/auth-provider';
+import { useUser } from '@clerk/nextjs';
 import html2pdf from 'html2pdf.js';
 import { InvoicePreview } from '@/components/invoice-preview';
 import { Label } from '@/components/ui/label';
@@ -38,7 +38,7 @@ type Customer = {
 };
 
 export default function NewInvoicePage() {
-    const { user } = useAuth();
+    const { user } = useUser();
     const { toast } = useToast();
     const [step, setStep] = useState(0);
     const [messages, setMessages] = useState<Message[]>([
@@ -127,7 +127,7 @@ export default function NewInvoicePage() {
     const totalAmount = subtotal + totalGst;
 
     const botAvatar = <Avatar className="h-8 w-8"><AvatarFallback><Bot/></AvatarFallback></Avatar>;
-    const userAvatar = <Avatar className="h-8 w-8"><AvatarImage src={user?.photoURL || ''}/><AvatarFallback><UserRound/></AvatarFallback></Avatar>;
+    const userAvatar = <Avatar className="h-8 w-8"><AvatarImage src={user?.imageUrl || ''}/><AvatarFallback><UserRound/></AvatarFallback></Avatar>;
 
     const renderStepContent = () => {
         if (step === 0) {
