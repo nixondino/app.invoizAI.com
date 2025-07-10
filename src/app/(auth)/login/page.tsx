@@ -12,7 +12,6 @@ export default function LoginPage() {
             card: 'shadow-lg',
           }
         }}
-        routing="hash"
         signUpUrl="/signup"
         redirectUrl="/dashboard"
       />
