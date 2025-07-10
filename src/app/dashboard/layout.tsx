@@ -1,6 +1,4 @@
 'use client';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 
 import { useUser } from '@clerk/nextjs';
@@ -13,13 +11,6 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const { user, isLoaded } = useUser();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (isLoaded && !user) {
-      router.replace('/login');
-    }
-  }, [user, isLoaded, router]);
 
   if (!isLoaded || !user) {
     return (
