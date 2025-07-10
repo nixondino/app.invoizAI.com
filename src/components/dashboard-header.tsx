@@ -3,7 +3,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { useUser, useClerk } from "@/clerk/nextjs"
+import { useUser, useClerk } from "@clerk/nextjs"
 import { LogOut, User as UserIcon, Menu } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet"
